@@ -42,6 +42,12 @@ def extract_main_content(html):
     main_content = '\n'.join(line for line in lines if line)
     return main_content
 
+def get_page_title(html):
+    """Extract the page title from HTML"""
+    soup = BeautifulSoup(html, 'html.parser')
+    title_tag = soup.find('title')
+    return title_tag.get_text().strip() if title_tag else "No Title Found"
+
 def save_content(url, content):
     """Save content to a file named after URL's hash in STORAGE_DIR"""
     ensure_storage_dir()
@@ -85,6 +91,7 @@ def check_url(url):
         response.raise_for_status()
         html_content = response.text
         current_content = extract_main_content(html_content)  # Extract main text
+        page_title = get_page_title(html_content)  # Extract page title
         current_hash = get_content_hash(current_content)
 
         # Get previous content
@@ -101,8 +108,8 @@ def check_url(url):
                     print(f"Change detected at {url}")
                 # Save new content
                 save_content(url, current_content)
-                # Send notification
-                subject = f"Content Change Detected at {url}"
+                # Send notification with page title in subject
+                subject = f"Content Change Detected: {page_title}"
                 body = f"URL: {url}\n\nNew Content:\n{current_content}"
                 send_email(subject, body)
             else:
