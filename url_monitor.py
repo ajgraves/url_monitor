@@ -5,6 +5,7 @@ import smtplib
 from email.mime.text import MIMEText
 from datetime import datetime
 from bs4 import BeautifulSoup
+from readability import Document
 
 # Configuration
 URLS_TO_MONITOR = [
@@ -29,21 +30,16 @@ def get_content_hash(content):
     return hashlib.md5(content.encode('utf-8')).hexdigest()
 
 def extract_main_content(html):
-    """Extract main readable text from HTML"""
-    soup = BeautifulSoup(html, 'html.parser')
-    # Remove script and style elements
-    for script in soup(["script", "style"]):
-        script.decompose()
-    # Get text
-    text = soup.get_text()
-    # Break into lines and remove leading/trailing whitespace
-    lines = (line.strip() for line in text.splitlines())
-    # Remove empty lines and join into a single string
-    main_content = '\n'.join(line for line in lines if line)
-    return main_content
+    """Extract main readable text from HTML using python-readability"""
+    doc = Document(html)
+    main_content = doc.summary()  # Returns HTML of main content
+    # Convert to plain text with BeautifulSoup
+    soup = BeautifulSoup(main_content, 'html.parser')
+    text = soup.get_text(separator='\n').strip()
+    return text if text else "No main content extracted"
 
 def get_page_title(html):
-    """Extract the page title from HTML"""
+    """Extract the page title from HTML using BeautifulSoup"""
     soup = BeautifulSoup(html, 'html.parser')
     title_tag = soup.find('title')
     return title_tag.get_text().strip() if title_tag else "No Title Found"
@@ -90,7 +86,7 @@ def check_url(url):
         response = requests.get(url, timeout=10)
         response.raise_for_status()
         html_content = response.text
-        current_content = extract_main_content(html_content)  # Extract main text
+        current_content = extract_main_content(html_content)  # Extract main text with readability
         page_title = get_page_title(html_content)  # Extract page title
         current_hash = get_content_hash(current_content)
 
